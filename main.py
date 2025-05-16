@@ -11,10 +11,10 @@ from cal_KFAC import cal_ihvp, cal_grad, cal_influence
 import warnings
 import datetime
 import pandas as pd
-# Suppress specific FutureWarning
+
 warnings.filterwarnings("ignore", category=FutureWarning, message=".*weights_only=False.*")
 
-# 初始化分布式训练
+
 def setup_distributed():
     torch.distributed.init_process_group(backend="nccl", timeout=datetime.timedelta(seconds=180000))
     local_rank = int(os.environ["LOCAL_RANK"])
@@ -22,18 +22,14 @@ def setup_distributed():
     return local_rank
 
 def main(args):
-    # 分布式环境初始化
     local_rank = setup_distributed()
     
     # load model
     model, tokenizer = load_model(args.model_path)
-    # 将模型移动到 GPU 并包裹为 DDP
-    # model = model.cuda(local_rank)
-    # model = DDP(model, device_ids=[local_rank])
 
     train_sample_rate = 0.5
     val_sample_rate = 1.0
-    # calculate KFAC;主要目的是计算海塞矩阵
+    # calculate KFAC
     train_dataset = LoadDataset(all_file_paths=args.full_train,
                                 tokenizer=tokenizer,
                                 max_seq_length=1024,
@@ -48,7 +44,7 @@ def main(args):
     gc.collect()
 
     per_val_list = []
-    # calculate validation gradient;主要目的是计算综合的验证集（定向/平均）的梯度
+    # calculate validation gradient
     validation_dataset = LoadDataset(all_file_paths=args.validation_path,
                                     tokenizer=tokenizer,
                                     max_seq_length=1024,
@@ -62,7 +58,6 @@ def main(args):
     del validation_dataset
     gc.collect()
 
-    # 计算验证集子集的梯度
     for subset in list_subdirectories(args.validation_path):
         subset_path = os.path.join(args.validation_path, subset)
         if os.path.exists(subset_path):
@@ -140,11 +135,11 @@ def list_subdirectories(directory):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", type=str, default=f"/mnt/petrelfs/mingchenlin/LLaMA-Factory/saves/neurips/llama3.1-8b/sft-IDEAL-M2-2_442")
-    parser.add_argument("--full-train", type=str, default=f"/mnt/petrelfs/mingchenlin/DataEvolution/train_dataset_1_M1_M2-2")
-    parser.add_argument("--validation-path", type=str, default=f"/mnt/petrelfs/mingchenlin/DataEvolution/validation/")
+    parser.add_argument("--model-path", type=str, default=f"Path of YOUR base model")
+    parser.add_argument("--full-train", type=str, default=f"Path of YOUR full train dataset")
+    parser.add_argument("--validation-path", type=str, default=f"Path of YOUR validation dataset")
     parser.add_argument("--sub-train", type=list, default=[f"Mathematics","Coding","bbh","Instruction","TrustAI"])
-    parser.add_argument("--save-path", type=str, default=f"/mnt/petrelfs/mingchenlin/DataEvolution/proportion_M2-2")
+    parser.add_argument("--save-path", type=str, default=f"Path of YOUR save folder")
     parser.add_argument("--use-full-layer", type=bool, default=True)
     parser.add_argument("--target-layers", type=list, default=["model.layers.1.mlp.gate_proj", "model.layers.5.mlp.gate_proj", "model.layers.10.mlp.gate_proj", "model.layers.15.mlp.gate_proj"
     "model.layers.20.mlp.gate_proj", "model.layers.24.mlp.gate_proj", "model.layers.25.mlp.gate_proj", "model.layers.26.mlp.gate_proj", "model.layers.27.mlp.gate_proj", "model.layers.28.mlp.gate_proj"])

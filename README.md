@@ -17,3 +17,5 @@ pip install -r requirements.txt
 ```bash
 torchrun --nproc_per_node=8 main.py
 ```
+
+Note: Please replace the args in `main.py` with your own.

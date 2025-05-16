@@ -93,17 +93,14 @@ def temp_seed(seed):
 
 def load_train_files(all_file_paths):
     file_path_list = []
-    # 检查路径下是否有子文件夹
     has_subfolders = any(os.path.isdir(os.path.join(all_file_paths, item)) for item in os.listdir(all_file_paths))
     if has_subfolders:
-        # 如果有子文件夹，递归遍历子文件夹
         for dirpath, _, filenames in os.walk(all_file_paths):
             for filename in filenames:
                 if filename.endswith('.jsonl'):
                     filepath = os.path.join(dirpath, filename)
                     file_path_list.append(filepath)
     else:
-        # 如果没有子文件夹，直接遍历当前目录下的 JSON 文件
         for filename in os.listdir(all_file_paths):
             if filename.endswith('.jsonl'):
                 filepath = os.path.join(all_file_paths, filename)

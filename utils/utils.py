@@ -11,7 +11,6 @@ def load_model(model_path: str,
                torch_dtype: Any = torch.bfloat16) -> Any:
     # model = AutoModelForCausalLM.from_pretrained(model_name_or_path, torch_dtype=torch_dtype, device_map="auto", trust_remote_code=True)
     # tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)
-    # 尝试加载分词器
     try:
         tokenizer = PreTrainedTokenizerFast.from_pretrained(model_path)
         # print("Using PreTrainedTokenizerFast.")
@@ -19,9 +18,7 @@ def load_model(model_path: str,
         print(f"Failed to load PreTrainedTokenizerFast: {e}. Trying LlamaTokenizer...")
         tokenizer = LlamaTokenizer.from_pretrained(model_path, legacy=False)
     
-    # 加载模型
     model = LlamaForCausalLM.from_pretrained(model_path, torch_dtype=torch_dtype, device_map="auto")
-    # model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch_dtype, device_map="auto")
 
     return model, tokenizer
 

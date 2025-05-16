@@ -51,8 +51,6 @@ def backward_hook_fn(layer_info, name):
             layer_info[name]["grad_output"] = grad_output[0].detach().clone()
     return hook
 
-# Get Q_list for each layer 就是特征值分解
-# def get_Q_list(mlp_blocks, output_dir, dtype):
 def get_Q_list(kfac_input_covs, kfac_grad_covs, mlp_blocks, output_dir, dtype, local_rank):
     if local_rank == 0:
         print("Entering Getting Q Lists")
@@ -64,8 +62,7 @@ def get_Q_list(kfac_input_covs, kfac_grad_covs, mlp_blocks, output_dir, dtype, l
         # # print(f"Getting Layer {i}'s Q_list")
         # sys.stdout.flush()
         input_covs_gpu = kfac_input_covs[i].cuda()
-        # q_a, _, q_a_t = torch.svd(input_covs_gpu) # 奇异值分解
-        _, q_a = torch.linalg.eigh(input_covs_gpu) # 特征值分解
+        _, q_a = torch.linalg.eigh(input_covs_gpu)
         q_a_cpu = q_a.to(dtype).cpu()
         q_a_list.append(q_a_cpu)
         # q_a_t_cpu = q_a_t.cpu()
@@ -243,7 +240,6 @@ def cal_ihvp(dataloader, model, output_dir, args, local_rank):
             torch.cuda.empty_cache()
             gc.collect()
     '''
-    # 存储, Note：存储完可以复用
     file_path = os.path.join(output_dir, "kfac_input_covs.pt")
     torch.save(kfac_input_covs, file_path)
     file_path = os.path.join(output_dir, "kfac_grad_covs.pt")
@@ -336,15 +332,15 @@ def cal_influence(hessian_path, train_grad_path, validation_grad_path, local_ran
     damping = 0.000
     # time_in = time.time()
     influence_list = [0.0] * len(sub_train_grad_list)
-    for i in range(len(sub_train_grad_list)): # i是mlp层的数目
-        V = sub_train_grad_list[i].cuda() # 参数维度
+    for i in range(len(sub_train_grad_list)):
+        V = sub_train_grad_list[i].cuda()
         # Performing eigendecompositions on the input and gradient covariance matrices
         q_a, q_s = q_a_list[i], q_s_list[i]
 
         # Calculate the EK-FAC diagonal damping inverse matrix.
         lambda_ii = lambda_ii_avg_list[i]
         ekfacDiag_damped_inv = 1.0 / (lambda_ii + damping)
-        ekfacDiag_damped_inv = ekfacDiag_damped_inv.reshape((V.shape[-2], V.shape[-1])) # 参数空间
+        ekfacDiag_damped_inv = ekfacDiag_damped_inv.reshape((V.shape[-2], V.shape[-1]))
 
         # calculate middle result
         q_a_t = q_a.t().cuda() # input * k
